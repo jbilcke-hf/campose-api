@@ -3,7 +3,7 @@ FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 LABEL maintainer="Hugging Face"
 
 ARG COLMAP_GIT_COMMIT=main
-ARG CUDA_ARCHITECTURES=native
+ARG CUDA_ARCHITECTURES=all
 ENV QT_XCB_GL_INTEGRATION=xcb_egl
 
 # Prevent stop building ubuntu at time zone selection.  
