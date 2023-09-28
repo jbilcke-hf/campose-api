@@ -2,11 +2,14 @@ import express, { Request, Response, NextFunction } from "express";
 import path from "path";
 import os from "os";
 import fs from "fs";
+import util from "util";
 import axios from "axios";
 import fileUpload from "express-fileupload";
 import archiver from "archiver";
 import ffmpeg from "fluent-ffmpeg";
 import { ColmapOptions, runColmap } from "./colmap.mts";
+
+const writeFile = util.promisify(fs.writeFile);
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -97,9 +100,7 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, pro
   console.log("typeof dataFile: " + typeof dataFile);
   if (dataFile instanceof Buffer) {
     console.log("dataFile is a Buffer!");
-    fs.writeFile(path.join(projectTempDir, "data.mp4"), dataFile, (err) => {
-      if (err) throw err;
-    });
+    await writeFile(path.join(projectTempDir, "data.mp4"), dataFile);
   } else if (typeof dataFile === "object" && dataFile.mv) {
     console.log(`typeof dataFile === "object" && dataFile.mv`);
     try {
