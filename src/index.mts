@@ -1,15 +1,12 @@
-import express from "express"
-import fileUpload from "express-fileupload"
-import path from "path"
-import os from "os"
-import fs from "fs"
-import archiver from "archiver"
-import ffmpeg from "fluent-ffmpeg"
-
-// import { initFolders } from "./initFolders.mts"
-import { runColmap, ColmapOptions } from "./colmap.mts"
-
-// initFolders()
+import express, { Request, Response, NextFunction } from "express";
+import path from "path";
+import os from "os";
+import fs from "fs";
+import axios from "axios";
+import fileUpload from "express-fileupload";
+import archiver from "archiver";
+import ffmpeg from "fluent-ffmpeg";
+import { ColmapOptions, runColmap } from "./colmap.mts";
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -17,87 +14,112 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const app = express()
-const port = 7860
+const app = express();
+const port = 7860;
 
-const maxActiveRequests = 4
-let activeRequests = 0
+const maxActiveRequests = 4;
+let activeRequests = 0;
 
-app.use(express.json({limit: '50mb'}))
-app.use(express.urlencoded({limit: '50mb', extended: true}))
-app.use(fileUpload())
+app.use(express.json({limit: '50mb'}));
+app.use(express.urlencoded({limit: '50mb', extended: true}));
+app.use(fileUpload());
 
-app.post("/", async (req, res) => {
-  if (activeRequests >= maxActiveRequests) {
-    res.status(503).json({message: "Service Unavailable: Max concurrent requests reached. Please try again later"}).end();
-    return
-  }
-  activeRequests++
-  
-  if (!req.files || !req.files.data || req.files.data.mimetype !== 'video/mp4') {
-    res.status(400).json({error: "Missing or invalid data file in request"}).end()
-    return
+app.use("/", async (req: Request, res: Response, _next: NextFunction) => {
+  if (activeRequests++ >= maxActiveRequests) {
+    return res.status(503).send("Service Unavailable");
   }
 
-  let options: ColmapOptions = req.body 
-  let dataFile: fileUpload.UploadedFile = req.files.data
-
-  let projectTempDir = path.join(os.tmpdir(), Math.random().toString().slice(2))
-  let outputTempDir = path.join(os.tmpdir(), Math.random().toString().slice(2))
+  const options: ColmapOptions = req.body;
+  let dataFile: fileUpload.UploadedFile | string = "";
 
   try {
-    fs.mkdirSync(projectTempDir) 
-    fs.mkdirSync(outputTempDir) 
+    if (req.is("json")) {
+      const { data } = await axios.get(req.body.assetUrl, {
+        responseType: "arraybuffer",
+      });
+      dataFile = Buffer.from(data, "binary");
+    }
+    // Request is not JSON type is file upload request
+    else {
+      if (!req.files || !req.files.data || req.files.data.mimetype !== 'video/mp4') {
+        return res.status(400).send("Missing or invalid data file in request");
+      }
+      dataFile = req.files.data;
+    }
 
-    await dataFile.mv(path.join(projectTempDir, dataFile.name)) 
+    const { projectTempDir, outputTempDir, imageFolder } = setupDirectories();
+    await handleFileStorage(dataFile, projectTempDir);
 
-    let imageFolder = path.join(projectTempDir, 'images');
-    fs.mkdirSync(imageFolder)
+    await generateImagesFromData(projectTempDir, imageFolder);
 
-    await new Promise((resolve, reject) => {
-      ffmpeg(path.join(projectTempDir, dataFile.name))
-        .outputOptions('-vf', 'fps=1') // Change this value depending on the number of frames you want from video.
-        .output(path.join(imageFolder, 'image-%03d.png'))
-        .on('end', resolve)
-        .on('error', reject)
-        .run()
-    })
+    options.projectPath = projectTempDir;
+    options.workspacePath = projectTempDir;
+    options.imagePath = imageFolder;
 
-    options.projectPath = projectTempDir 
-    options.workspacePath = projectTempDir 
-    options.imagePath = imageFolder
+    // note: we don't need to read the result since this is a function having side effects on the file system
+    const result = await runColmap(options);
+    console.log("result:", result);
+    
+    await createOutputArchive(outputTempDir);
 
-    const result = await runColmap(options)
-
-    let outputFilePath = path.join(outputTempDir, 'output.zip')
-    let output = fs.createWriteStream(outputFilePath)
-    let archive = archiver('zip')
-
-    archive.directory(outputTempDir, false)
-    archive.pipe(output)
-    await archive.finalize()
-
-    res.status(200)
-    res.download(outputFilePath, 'output.zip', (error) => {
-      if (!error) fs.rmSync(projectTempDir, {recursive: true, force: true}) 
-      fs.rmSync(outputTempDir, {recursive: true, force: true})
-    })
+    res.download(path.join(outputTempDir, 'output.zip'), 'output.zip', (error) => {
+      if (!error) fs.rmSync(projectTempDir, {recursive: true, force: true});
+      fs.rmSync(outputTempDir, {recursive: true, force: true});
+    });
   } catch (error) {
-    res.status(500).json({
-      error: "Couldn't generate pose data",
-      message: error
-    }).end()
+    res.status(500).send(`Couldn't generate pose data. Error: ${error}`);
   } finally {
-    activeRequests--
+    activeRequests--;
   }
 });
 
-app.get("/", async (req, res) => {
-  res.status(200)
-  res.write(`<html><head></head><body>
-Campose API is a micro-service used to generate came pose data from a set of images.
-    </body></html>`)
-  res.end()
-})
+app.get("/", async (req: Request, res: Response) => {
+  res.send("Campose API is a micro-service used to generate camera pose data from a set of images.");
+});
 
-app.listen(port, () => { console.log(`Open http://localhost:${port}`) })
+app.listen(port, () => console.log(`Listening at http://localhost:${port}`));
+
+function setupDirectories() {
+  const projectTempDir = path.join(os.tmpdir(), Math.random().toString().slice(2));
+  const outputTempDir = path.join(os.tmpdir(), Math.random().toString().slice(2));
+  const imageFolder = path.join(projectTempDir, 'images');
+
+  fs.mkdirSync(projectTempDir);
+  fs.mkdirSync(outputTempDir);
+  fs.mkdirSync(imageFolder);
+
+  return { projectTempDir, outputTempDir, imageFolder };
+}
+
+async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, projectTempDir: string) {
+  if (typeof dataFile === "string") {
+    fs.writeFile(path.join(projectTempDir, "data.mp4"), dataFile, (err) => {
+      if (err) throw err;
+    });
+  } else {
+    await dataFile.mv(path.join(projectTempDir, dataFile.name));
+  }
+}
+
+function generateImagesFromData(projectTempDir: string, imageFolder: string) {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg(path.join(projectTempDir, 'data.mp4'))
+      .outputOptions('-vf', 'fps=1')
+      .output(path.join(imageFolder, 'image-%03d.png'))
+      .on('end', resolve)
+      .on('error', reject)
+      .run()
+  });
+}
+
+function createOutputArchive(outputTempDir: string) {
+  return new Promise<void>((resolve, reject) => {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const output = fs.createWriteStream(path.join(outputTempDir, 'output.zip'));
+
+    archive.pipe(output);
+    archive.directory(path.join(outputTempDir, '/'), '');
+    archive.finalize();
+    resolve();
+  });
+}
