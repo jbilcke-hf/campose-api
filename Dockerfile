@@ -1,4 +1,5 @@
-FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+# FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
     
 LABEL maintainer="Hugging Face"
 
@@ -51,6 +52,7 @@ RUN cd colmap && \
     git checkout FETCH_HEAD && \
     mkdir build && \
     cd build && \
+    find . -name CMakeLists.txt -exec sed -i 's/CUDA_ARCHITECTURES native/CUDA_ARCHITECTURES all/' {} && \
     cmake .. -GNinja -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES} && \
     ninja && \
     ninja install && \
