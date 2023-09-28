@@ -33,13 +33,14 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
   let dataFile: fileUpload.UploadedFile | string = "";
 
   try {
+    // we accept either JSON requests
     if (req.is("json")) {
       const { data } = await axios.get(req.body.assetUrl, {
         responseType: "arraybuffer",
       });
       dataFile = Buffer.from(data, "binary");
     }
-    // Request is not JSON type is file upload request
+    // or file uploads
     else {
       if (!req.files || !req.files.data || req.files.data.mimetype !== 'video/mp4') {
         return res.status(400).send("Missing or invalid data file in request");
@@ -92,12 +93,18 @@ function setupDirectories() {
 }
 
 async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, projectTempDir: string) {
-  if (typeof dataFile === "string") {
+  if (dataFile instanceof Buffer) {
     fs.writeFile(path.join(projectTempDir, "data.mp4"), dataFile, (err) => {
       if (err) throw err;
     });
+  } else if (typeof dataFile === "object" && dataFile.mv) {
+    try {
+      await dataFile.mv(path.join(projectTempDir, dataFile.name));
+    } catch (error) {
+      throw new Error(`File can't be moved: ${error}`);
+    }
   } else {
-    await dataFile.mv(path.join(projectTempDir, dataFile.name));
+    throw new Error("Invalid File");
   }
 }
 
