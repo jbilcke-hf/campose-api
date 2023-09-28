@@ -99,9 +99,9 @@ function setupDirectories() {
   const outputTempDir = path.join(os.tmpdir(), Math.random().toString().slice(2));
   const imageFolder = path.join(projectTempDir, 'images');
 
-  fs.mkdirSync(projectTempDir);
-  fs.mkdirSync(outputTempDir);
-  fs.mkdirSync(imageFolder);
+  fs.mkdirSync(projectTempDir, { recursive: true });
+  fs.mkdirSync(outputTempDir, { recursive: true });
+  fs.mkdirSync(imageFolder, { recursive: true });
 
   return { projectTempDir, outputTempDir, imageFolder };
 }
