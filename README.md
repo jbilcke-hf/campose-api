@@ -18,6 +18,11 @@ Campose API is a REST API to generate camera pose data from a set of images or a
 
 ## Manual testing (using CURL)
 
+Converting a video to images:
+
+```
+ffmpeg -i in.mp4 %04d.jpg
+```
 Generating poses from a local video:
 
 ```bash:

@@ -133,12 +133,20 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | Buffer, pro
 }
 
 function generateImagesFromData(imageFolder: string, filePath: string) {
+  console.log(`generateImagesFromData("${imageFolder}", "${filePath}")`);
   return new Promise<void>((resolve, reject) => {
     ffmpeg(filePath)
-      .outputOptions('-vf', 'fps=1')
+      // .outputOptions('-vf', 'fps=1')
+      .outputOptions('-i')
       .output(path.join(imageFolder, 'image-%03d.png'))
-      .on('end', resolve)
-      .on('error', reject)
+      .on('end', () => {
+        console.log('Image generation finished successfully.');
+        resolve();
+      })
+      .on('error', (err) => {
+        console.log(`failed to generate the images: ${err}`)
+        reject(err);
+      })
       .run()
   });
 }
