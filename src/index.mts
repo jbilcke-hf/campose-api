@@ -33,7 +33,7 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
   }
 
   const options: ColmapOptions = req.body;
-  let dataFile: fileUpload.UploadedFile | string = "";
+  let dataFile: fileUpload.UploadedFile | Buffer = Buffer.from("");
 
   try {
     // we accept either JSON requests
@@ -95,7 +95,7 @@ function setupDirectories() {
   return { projectTempDir, outputTempDir, imageFolder };
 }
 
-async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, projectTempDir: string) {
+async function handleFileStorage(dataFile: fileUpload.UploadedFile | Buffer, projectTempDir: string) {
   console.log(`handleFileStorage called (projectTempDir: ${projectTempDir})`);
   console.log("typeof dataFile: " + typeof dataFile);
   if (dataFile instanceof Buffer) {
@@ -104,6 +104,9 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, pro
   } else if (typeof dataFile === "object" && dataFile.mv) {
     console.log(`typeof dataFile === "object" && dataFile.mv`);
     try {
+      console.log("dataFile.name = " + dataFile.name);
+
+      console.log("path.join(projectTempDir, dataFile.name) = " + path.join(projectTempDir, dataFile.name));
       await dataFile.mv(path.join(projectTempDir, dataFile.name));
     } catch (error) {
       throw new Error(`File can't be moved: ${error}`);
