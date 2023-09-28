@@ -36,10 +36,8 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
 
   const defaultOptions: ColmapOptions = {
     command: 'automatic_reconstructor',
-    parameters: {
-      workspace_path: projectTempDir + '/images',
-      image_path: projectTempDir + '/images',
-    },
+    workspacePath: projectTempDir + '/images',
+    imagePath: projectTempDir + '/images',
   };
 
   const requestBody = typeof req.body === "object" ? req.body : undefined;
