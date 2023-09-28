@@ -16,11 +16,18 @@ WARNING - This project is not finished!
 
 Campose API is a REST API to generate camera pose data from a set of images or a video.
 
-### TODO
+## Manual testing (using CURL)
 
-- [x] Compile colmap with Docker
-- [ ] Support upload of assets
-- [ ] Support download of scenes
+Generating poses from a local video:
+
+```bash:
+curl -X POST -H "Content-Type: multipart/form-data" -F "data=@video.mp4" http://localhost:7860/
+```
+
+Generating poses from a remote video:
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"assetUrl":"http://example.com/video.mp4"}' http://localhost:7860/
+```
 
 ## Running on your machine
 
