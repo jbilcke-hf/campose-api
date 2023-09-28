@@ -32,7 +32,21 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
     return res.status(503).send("Service Unavailable");
   }
 
-  const options: ColmapOptions = req.body;
+  const { projectTempDir, outputTempDir, imageFolder } = setupDirectories();
+
+  const defaultOptions: ColmapOptions = {
+    command: 'automatic_reconstructor',
+    parameters: {
+      workspace_path: projectTempDir + '/images',
+      image_path: projectTempDir + '/images',
+    },
+  };
+
+  const requestBody = typeof req.body === "object" ? req.body : undefined;
+  const options: ColmapOptions = {...defaultOptions, ...requestBody};
+
+  console.log("options:", options);
+
   let dataFile: fileUpload.UploadedFile | Buffer = Buffer.from("");
 
   try {
@@ -51,7 +65,6 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
       dataFile = req.files.data;
     }
 
-    const { projectTempDir, outputTempDir, imageFolder } = setupDirectories();
     const filePath = await handleFileStorage(dataFile, projectTempDir);
 
     await generateImagesFromData(imageFolder, filePath);
