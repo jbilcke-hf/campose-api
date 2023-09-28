@@ -52,7 +52,7 @@ RUN cd colmap && \
     git checkout FETCH_HEAD && \
     mkdir build && \
     cd build && \
-    find . -name CMakeLists.txt -exec sed -i 's/CUDA_ARCHITECTURES native/CUDA_ARCHITECTURES all/' {} && \
+    # cmake .. -GNinja && \
     cmake .. -GNinja -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES} && \
     ninja && \
     ninja install && \
