@@ -52,9 +52,9 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
     }
 
     const { projectTempDir, outputTempDir, imageFolder } = setupDirectories();
-    await handleFileStorage(dataFile, projectTempDir);
+    const filePath = await handleFileStorage(dataFile, projectTempDir);
 
-    await generateImagesFromData(projectTempDir, imageFolder);
+    await generateImagesFromData(imageFolder, filePath);
 
     options.projectPath = projectTempDir;
     options.workspacePath = projectTempDir;
@@ -100,14 +100,17 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | Buffer, pro
   console.log("typeof dataFile: " + typeof dataFile);
   if (dataFile instanceof Buffer) {
     console.log("dataFile is a Buffer!");
-    await writeFile(path.join(projectTempDir, "data.mp4"), dataFile);
+    const filePath = path.join(projectTempDir, "data.mp4");
+    await writeFile(filePath, dataFile);
+    return filePath;
   } else if (typeof dataFile === "object" && dataFile.mv) {
     console.log(`typeof dataFile === "object" && dataFile.mv`);
     try {
       console.log("dataFile.name = " + dataFile.name);
-
-      console.log("path.join(projectTempDir, dataFile.name) = " + path.join(projectTempDir, dataFile.name));
-      await dataFile.mv(path.join(projectTempDir, dataFile.name));
+      const filePath = path.join(projectTempDir, dataFile.name)
+      console.log("path.join(projectTempDir, dataFile.name) = " + filePath);
+      await dataFile.mv(filePath);
+      return filePath;
     } catch (error) {
       throw new Error(`File can't be moved: ${error}`);
     }
@@ -115,11 +118,12 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | Buffer, pro
     console.log(`unrecognized dataFile format`);
     throw new Error("Invalid File");
   }
+
 }
 
-function generateImagesFromData(projectTempDir: string, imageFolder: string) {
+function generateImagesFromData(imageFolder: string, filePath: string) {
   return new Promise<void>((resolve, reject) => {
-    ffmpeg(path.join(projectTempDir, 'data.mp4'))
+    ffmpeg(filePath)
       .outputOptions('-vf', 'fps=1')
       .output(path.join(imageFolder, 'image-%03d.png'))
       .on('end', resolve)
