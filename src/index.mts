@@ -24,7 +24,7 @@ app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({limit: '50mb', extended: true}));
 app.use(fileUpload());
 
-app.use("/", async (req: Request, res: Response, _next: NextFunction) => {
+app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
   if (activeRequests++ >= maxActiveRequests) {
     return res.status(503).send("Service Unavailable");
   }
@@ -59,7 +59,7 @@ app.use("/", async (req: Request, res: Response, _next: NextFunction) => {
     // note: we don't need to read the result since this is a function having side effects on the file system
     const result = await runColmap(options);
     console.log("result:", result);
-    
+
     await createOutputArchive(outputTempDir);
 
     res.download(path.join(outputTempDir, 'output.zip'), 'output.zip', (error) => {
