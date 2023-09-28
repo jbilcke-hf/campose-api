@@ -19,7 +19,8 @@ RUN apt-get install -y \
   curl \
   git \
   git-lfs \
-  unzip
+  unzip \
+  ffmpeg
 
 RUN git lfs install
 
