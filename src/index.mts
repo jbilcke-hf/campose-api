@@ -36,8 +36,8 @@ app.post("/", async (req: Request, res: Response, _next: NextFunction) => {
 
   const defaultOptions: ColmapOptions = {
     command: 'automatic_reconstructor',
-    workspacePath: projectTempDir + '/images',
-    imagePath: projectTempDir + '/images',
+    workspacePath: projectTempDir,
+    imagePath: imageFolder,
   };
 
   const requestBody = typeof req.body === "object" ? req.body : undefined;
@@ -135,10 +135,11 @@ async function handleFileStorage(dataFile: fileUpload.UploadedFile | Buffer, pro
 function generateImagesFromData(imageFolder: string, filePath: string) {
   console.log(`generateImagesFromData("${imageFolder}", "${filePath}")`);
   return new Promise<void>((resolve, reject) => {
+    console.log(`going to write to ${path.join(imageFolder, 'image%d.jpg')}`);
     ffmpeg(filePath)
       // .outputOptions('-vf', 'fps=1')
       .outputOptions('-i')
-      .output(path.join(imageFolder, 'image-%03d.jpg'))
+      .output(path.join(imageFolder, 'image%d.jpg'))
       .on('end', () => {
         console.log('Image generation finished successfully.');
         resolve();
