@@ -138,7 +138,7 @@ function generateImagesFromData(imageFolder: string, filePath: string) {
     ffmpeg(filePath)
       // .outputOptions('-vf', 'fps=1')
       .outputOptions('-i')
-      .output(path.join(imageFolder, 'image-%03d.png'))
+      .output(path.join(imageFolder, 'image-%03d.jpg'))
       .on('end', () => {
         console.log('Image generation finished successfully.');
         resolve();
