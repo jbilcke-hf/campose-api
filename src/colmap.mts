@@ -72,6 +72,11 @@ export const runColmap = (options: ColmapOptions): Promise<string> => {
 
     exec(command, (error, stdout, stderr) => {
       if (error) {
+        console.error('Error running colmap command:', command);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.log("stdout:", stdout);
+        console.log("stderr:", stderr);
         reject(stderr);
       } else {
         resolve(stdout);
