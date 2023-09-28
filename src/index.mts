@@ -93,17 +93,22 @@ function setupDirectories() {
 }
 
 async function handleFileStorage(dataFile: fileUpload.UploadedFile | string, projectTempDir: string) {
+  console.log(`handleFileStorage called (projectTempDir: ${projectTempDir})`);
+  console.log("typeof dataFile: " + typeof dataFile);
   if (dataFile instanceof Buffer) {
+    console.log("dataFile is a Buffer!");
     fs.writeFile(path.join(projectTempDir, "data.mp4"), dataFile, (err) => {
       if (err) throw err;
     });
   } else if (typeof dataFile === "object" && dataFile.mv) {
+    console.log(`typeof dataFile === "object" && dataFile.mv`);
     try {
       await dataFile.mv(path.join(projectTempDir, dataFile.name));
     } catch (error) {
       throw new Error(`File can't be moved: ${error}`);
     }
   } else {
+    console.log(`unrecognized dataFile format`);
     throw new Error("Invalid File");
   }
 }
